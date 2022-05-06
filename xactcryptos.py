@@ -35,7 +35,7 @@ def analyze_and_plot(title, daily_ret, xcol, ycol, plot_type, mkt='SPY'):
         return x
         #hvplot.show(x)
     elif plot_type=='C' or plot_type=='c' or plot_type == 'Cumulative':
-        cumulative_returns = (1 + daily_ret).cumprod()
+        cumulative_returns = (1 + daily_ret).cumprod() -1
         x= cumulative_returns[ycol].hvplot(
             title = title,
             ylabel = ycol,  # lambda y:  if ycol!=None: y=ycol,
@@ -80,9 +80,13 @@ def xact(ticker):
     'iShares U.S. Technology',
     'Invesco China Technology',
     'Invesco S&P 500 Equal Weight Technology',
-    'iShares Evolved U.S. Technology']
+    'iShares Evolved U.S. Technology',
+    'iShares Russell 2000',
+    'Vanguard Total Bond Market',
+    'Ark Innovation',
+    'Invesco S&P500 Pure Value']
 
-    etfs=['SPY', 'IYW', 'CQQQ', 'RYT', 'IETC']
+    etfs=['SPY', 'IYW', 'CQQQ', 'RYT', 'IETC', 'IWM', 'BND','ARKK','RPV']
     x=get_sharpe(df1['Close'])
     print (f"\nSHARPE Ratio for {ticker} is ...{x}\n")
     

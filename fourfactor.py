@@ -39,5 +39,5 @@ def ffanalyse(tkr):
     results=model.fit()
     print(results.summary())
 
-    questionary.text("TYPE ANY KEY TO PROCEED...? ").ask()
+    questionary.text("Type ENTER Key TO Proceed...? ").ask()
     
