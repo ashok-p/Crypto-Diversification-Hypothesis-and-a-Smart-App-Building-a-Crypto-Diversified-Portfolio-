@@ -9,46 +9,75 @@ import seaborn as sn
 #%matplotlib inline
 import panel as pn
 import questionary
+import os
+
+from dotenv import load_dotenv
+from MCForecastTools import MCSimulation
+
+def sanitize_date(date):
+    return pd.to_datetime(date).dt.date
+
+# Get Data from a source. The sources can be any api's that return pandas Dataframes. Using Yahoo as source for phase 1 
+# But provision is there for other api's. The Arguments for the get_data function are:
+# - ticker : the symbol or symbols
+# - start : start date
+# - end : end date
+# - source: 'Yahoo'/'y/'Y' for now, can be any other, but code need be added for them
+# pct_change: True (Default) - if you want cleaned data with NaNs removed and pct_change() format. 
+#           : False - if want raw data.
+# 
 
 def get_data(ticker, start, end, source='Yahoo', pct_change=True):
     if source=="" or source=='Yahoo' or source == 'y' or source == 'Y':
-       if pct_change==False:
-         return pdr.get_data_yahoo(ticker, start, end)
-       else:
-        return pdr.get_data_yahoo(ticker, start, end).pct_change().dropna()
+        if pct_change==False:
+            return pdr.get_data_yahoo(ticker, start, end)
+        else:
+            return pdr.get_data_yahoo(ticker, start, end).dropna().pct_change() # had to do dropna first bec of poor data
     else:
         print(f"The data source {source} is not yet implemented")
         return None
-def prep_data(dataframe1, dataframe2, options):
-    print("Yet to implement")
-def analyze_and_plot(title, daily_ret, xcol, ycol, plot_type, mkt='SPY'):
-    
+
+# To Analyze and Plot the returns 
+# Arguments-
+# - title : the title of the plot
+# - daily_ret: dataframe to plot
+# - xcol : title of x-axis
+# - plot_type: H/h/d/D - for Historical/daily returns
+#           : C/c/Cumulative for cumulative Returns 
+# used rolling window 0f 60
+#
+#def analyze_and_plot(title, daily_ret, xcol, ycol, plot_type):
+def analyze_and_plot(title, daily_ret, xcol, plot_type):
+
     #PLOT TYPE - Historical or Dailiy Returns
     if plot_type=='H' or plot_type=='h' or plot_type == 'D' or plot_type == 'd':
-        x= daily_ret[ycol].hvplot(
+        x= daily_ret.rolling(window=60).mean().hvplot(
             title = title,
-            ylabel = ycol,  # lambda y:  if ycol!=None: y=ycol,
-            xlabel = xcol, # lambda x: if xcol!=None: x=xcol,
-           # height = 600,
-            width = 400
+            xlabel = xcol, 
+            width = 700
             )
         return x
-        #hvplot.show(x)
     elif plot_type=='C' or plot_type=='c' or plot_type == 'Cumulative':
         cumulative_returns = (1 + daily_ret).cumprod() -1
-        x= cumulative_returns[ycol].hvplot(
+        x= cumulative_returns.rolling(window=60).mean().hvplot(
             title = title,
-            ylabel = ycol,  # lambda y:  if ycol!=None: y=ycol,
             xlabel = xcol, # lambda x: if xcol!=None: x=xcol,
-           # height = 600,
-            width = 400
+            width = 700
         )
         return x
-       # hvplot.show(x)
-  #Example -get_beta(df['Close']['BTC-USD'], df['Close']['ETH-USD'])
+    
+#Get Beta factor for a Ticker. The arguments are:
+# df1: the ticker dataframe close column 
+# df2: the mkt(or any other) dataframe 'close' column
+#Example -get_beta(df['Close']['BTC-USD'], df['Close']['ETH-USD'])
+
 def get_beta(df1, df2):
     return df1.cov(df2) / df2.var()
           # df - daily return data frame for the security..we pass the Close column or Adj Close as param, 
+
+    
+# Get Sharpe Ratio for a Ticker symbol. The argument is:
+# df - the ticker dataframe 'close' or 'Adj close' column
 # e.g. get_sharpe(dailyret['Adj Close'])
 
 def get_sharpe(df):
@@ -59,26 +88,35 @@ def get_sharpe(df):
     sharpe_ratio = average_annual_return / annualized_std
     return sharpe_ratio
 
+# Dane doing this part
 def do_montecarlo(df):
     print('will do soon')
+    load_dotenv('my_api.env')
+    
 
 
-def xact(ticker):
-    print(f'Hey Rich guy!!!  WANNA BUY SOME  {ticker}  CRYptos.. U have some guts!!\n ')
+    
+
+#The following code was designed for the interactive CLI interface. The hvplot would not return the control back to the
+#program. so had to change course.
+
+def xact(tickers_crypto, etfs):
+    print(f'Thank you for your interest in  {tickers_crypto}  CRYptos..!\n ')
     
     x =f'''To assist you in your decision, provided below are:
     - Beta 
-    - Sharpe Ratios
-    - projection w MonteCarlo plot\n'''
+    - Sharpe Ratios\n'''
     print(x)
-
+    
     start = dt.datetime(2017, 1, 1)
-    end = dt.datetime(2022, 5, 2)
-    df1= get_data(ticker, start, end)
+    end = dt.datetime(2022, 1, 1)
+    
+    for ticker in tickers_crypto:
+        df1= get_data(ticker, start, end)
 
-    etf_name=['S&P 500',
+        etf_name=['S&P 500',
     'iShares U.S. Technology',
-    'Invesco China Technology',
+    'Nasdaq 100',
     'Invesco S&P 500 Equal Weight Technology',
     'iShares Evolved U.S. Technology',
     'iShares Russell 2000',
@@ -86,20 +124,21 @@ def xact(ticker):
     'Ark Innovation',
     'Invesco S&P500 Pure Value']
 
-    etfs=['SPY', 'IYW', 'CQQQ', 'RYT', 'IETC', 'IWM', 'BND','ARKK','RPV']
-    x=get_sharpe(df1['Close'])
-    print (f"\nSHARPE Ratio for {ticker} is ...{x}\n")
+    #etfs=['SPY', 'IYW', 'QQQ', 'RYT', 'IETC', 'IWM', 'BND','ARKK','RPV']
+        x=get_sharpe(df1['Close'])
+        print (f"\nSHARPE Ratio for {ticker} is ...{x}\n")
     
-    print('The Betas against various Technology Funds are...\n')
-    j=0
-    for i in etfs:
+        print('The Betas against various Technology Funds are...\n')
+        j=0
+        for i in etfs:
 
-        df2=get_data(i, start, end)
-        b=get_beta(df1['Close'],df2['Close'])
-        print (f'{etf_name[j]}\t{b:.2f}')
-        j+=1
+            df2=get_data(i, start, end)
+            b=get_beta(df1['Close'],df2['Close'])
+            print (f'{etf_name[j]}\t{b:.2f}')
+            j+=1
+        
+        resp=questionary.text("When you are done digesting Betas and Sharpe, press enter..").ask()
+    #cp=analyze_and_plot('Cumulative Returns', df1, xcol='Date', plot_type='c')
+   # hvplot.show(cp)
+#Removed the code to do the plotting as hvplot couldn't return control back to the porgram
 
-    resp=questionary.text("When you are done digesting Betas and Sharpe, press enter..").ask()
-
-    cp=analyze_and_plot('Cumulative Returns', df1, xcol='Date', ycol='Close', plot_type='c')
-    hvplot.show(cp)
